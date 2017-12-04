@@ -5,36 +5,46 @@
 #sample data is random
 #-----------------------------------------------------
 
-#library(gsheet)
-#library(reshape2)
-#library(dplyr)
-#library(ggplot2)
-
 #inputs
-n=10 #travellers
-no_cont <- 50 #contacts
-beta <- 5 #distance decay rate
+no_cont <- 5 #contacts
+beta <- 2 #distance decay rate
+periods <- 1
+a <- runif(4)
+b <- runif(4)
+c <- runif(100)
+d <- runif(100)
 
-id <- c(1:1000)
-x <- runif(1000)
-y <- runif(1000)
-df <- data.frame(cbind(id, x, y))
+#data1
+df1 <- data.frame(cbind(a, b))
+names(df1) <- c("x", "y")
+df1$trav <- 1
+
+#data2
+df2 <- data.frame(cbind(c, d))
+names(df2) <- c("x", "y")
+df2$trav <- 0
+
+#df
+df <- rbind(df1,df2)
+l <- nrow(df)
+df$id <- c(1:l)
 
 #distance matrix
-d <- dist(df[,c("x","y")],diag=TRUE, method="euclidean")
+d <- dist(df[,c("x","y")],diag=TRUE, method="euclidean")#do I know order is preserved?
 distmat <- as.matrix(d)
-dist_long <- melt(distmat)#reshape
+dist_long <- reshape2::melt(distmat)#reshape library
 names(dist_long) <- c("idfrom", "idto", "Edist")
+dist_long <- dist_long[dist_long$Edist > 0,]
 
 #identify the traveller(s) without replacement
-travellers <- data.frame(sample(1:100,n,replace=FALSE))
-names(travellers) <- "trav"
-dist_sampled <- merge(dist_long,travellers, by.x="idfrom", by.y="trav")
-dist_sampled <- dist_sampled[dist_sampled$Edist > 0,]
+dist_sampled <- merge(dist_long,df[df$trav==1,], by.x="idfrom", by.y="id")
 
 #sample from within groups
 id <- 0
 contacts <- data.frame(id)
+
+travellers <- as.data.frame(df[df$trav==1,"id"])
+n <- nrow(travellers)
 
 #sample from within groups with a weight
 for(i in 1:n)
@@ -47,6 +57,7 @@ for(i in 1:n)
   names(c) <- "id"
   contacts <- rbind(c,contacts)
 }
+
 contacts <- data.frame(contacts[contacts$id > 0,])
 names(contacts) <- "id"
 
@@ -62,4 +73,9 @@ final <- rbind(travellers, contacts)
 #plot(final$x,final$y, cex=final$type, xlim=c(0,1), ylim=c(0,1))
 
 #plot
-ggplot(final, aes(x=x, y=y, color=type, size=type)) + geom_point()
+ggplot2::ggplot(final, ggplot2::aes(x=x, y=y, color=type, size=type)) + 
+  ggplot2::geom_point() +
+  ggplot2::xlim(0,1) + 
+  ggplot2::ylim(0,1)
+  
+
